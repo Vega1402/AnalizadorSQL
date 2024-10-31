@@ -32,7 +32,7 @@ public class Main {
         // Crear la ventana principal
         JFrame frame = new JFrame("SQL Analyzer");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 400); // Aumentar el tamaño para acomodar dos áreas de texto
+        frame.setSize(1000, 500); // Aumentar el tamaño para acomodar dos áreas de texto
 
         // Crear un panel principal
         JPanel panel = new JPanel();
@@ -40,15 +40,18 @@ public class Main {
 
         // Crear un subpanel para las dos JTextArea
         JPanel textPanel = new JPanel();
+        
         textPanel.setLayout(new GridLayout(1, 2)); // Dividir el subpanel en dos columnas
 
         // Crear JTextArea para entrada de código SQL
         JTextArea textArea = new JTextArea();
+        textArea.setFont(new Font("Arial", Font.PLAIN, 16));
         JScrollPane scrollPane = new JScrollPane(textArea);
         textPanel.add(scrollPane); // Añadir el área de entrada de SQL al subpanel
 
         // Crear JTextPane para mostrar los tokens
         JTextPane tokenTextPane = new JTextPane();
+        tokenTextPane.setFont(new Font("Arial", Font.PLAIN, 16));
         tokenTextPane.setEditable(false); // Hacerlo solo de lectura
         JScrollPane tokenScrollPane = new JScrollPane(tokenTextPane);
         textPanel.add(tokenScrollPane); // Añadir el área de tokens al subpanel
@@ -59,6 +62,7 @@ public class Main {
         
         // Añadir el panel principal a la ventana
         frame.add(panel);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
         // Agregar un DocumentListener para cambiar el color en tiempo real

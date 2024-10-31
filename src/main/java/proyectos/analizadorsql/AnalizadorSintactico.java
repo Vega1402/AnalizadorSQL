@@ -13,18 +13,23 @@ package proyectos.analizadorsql;
 
 
 import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Set;
 
+
 public class AnalizadorSintactico {
 
     private Iterator<Token> tokens;
     private Token tokenActual;
-    private Set<String> mensajesDeError; // Para almacenar mensajes de error únicos
+    private Set<String> mensajesDeError; 
+    private List<String> mensajesDeExito = new ArrayList<>();
      
     // Constructor para inicializar la lista de tokens
     public AnalizadorSintactico(List<Token> tokens) {
@@ -32,6 +37,7 @@ public class AnalizadorSintactico {
 
         avanzar(); // Avanza al primer token
         mensajesDeError = new HashSet<>(); // Inicializa el conjunto de mensajes de error
+
     }
 
     // Método para avanzar al siguiente token
@@ -52,7 +58,7 @@ public class AnalizadorSintactico {
             avanzar();
             if (tokenActual.getText().equals("DATABASE")) {
                 analizarCrearBaseDeDatos();
-                continue;
+               continue;
             }
             if (tokenActual.getText().equals("TABLE")) {
                 analizarCrearTabla();
@@ -75,21 +81,30 @@ public class AnalizadorSintactico {
             registrarError("Se esperaba 'INTO' después de 'INSERT'");
             avanzar();
             continue;
-        } 
+        }
+        
+        
+        //ALTER TABLA
+
+        if (tokenActual.getText().equals("ALTER")) {
+                analizarAlterTable();
+                continue;
+            }
+        
         //Update y Delete
         if (tokenActual.getText().equals("SELECT")) {
                 analizarSelect();
                 continue;
             }
         
-                    if (tokenActual.getText().equals("UPDATE")) {
+        if (tokenActual.getText().equals("UPDATE")) {
                 avanzar();
                 analizarUpdate();
                 continue;
             }
 
             // Manejo para DELETE
-            if (tokenActual.getText().equals("DELETE")) {
+            if (tokenActual.getText().equals("DETELE")) {
                 avanzar();
                 analizarDelete();
                 continue;
@@ -105,9 +120,11 @@ public class AnalizadorSintactico {
     private void analizarCrearBaseDeDatos() {
         avanzar();
         if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+            String nombreIdentificador = tokenActual.getText();
             avanzar();
             if (tokenActual != null && tokenActual.getText().equals(";")) {
                 avanzar();
+                registrarMensajeExito("CREATE DATABASE: "+ nombreIdentificador  );
             } else {
                 registrarError("Se esperaba ';' al final de la instrucción CREATE DATABASE");
             }
@@ -120,6 +137,7 @@ public class AnalizadorSintactico {
     private void analizarCrearTabla() {
         avanzar();
         if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+            String nombreIdentificador = tokenActual.getText();
             avanzar();
             if (tokenActual != null && tokenActual.getText().equals("(")) {
                 avanzar();
@@ -128,6 +146,7 @@ public class AnalizadorSintactico {
                     avanzar();
                     if (tokenActual != null && tokenActual.getText().equals(";")) {
                         avanzar();
+                        registrarMensajeExito("CREATE TABLE: "+ nombreIdentificador  );
                     } else {
                         registrarError("Se esperaba ';' al final de la instrucción CREATE TABLE");
                     }
@@ -312,79 +331,100 @@ public class AnalizadorSintactico {
     // Método para registrar errores únicos
     private void registrarError(String mensaje) {
         if (mensajesDeError.add(mensaje)) { // Solo se añade si no está presente
-            System.out.println("Error: " + mensaje);
+        //    System.out.println("Error: " + mensaje);
         }
     }
     
+    // Método para registrar un único mensaje de éxito
+    private void registrarMensajeExito(String mensaje) {
+        mensajesDeExito.add(mensaje); 
+    }
     // Método para generar un archivo HTML con los errores y los tokens
-    public void generarArchivoHTML(String nombreArchivo, List<Token> tokens) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivo))) {
-            // Escribiendo la cabecera del documento HTML
-            writer.write("<!DOCTYPE html>");
-            writer.write("<html lang=\"es\">");
-            writer.write("<head>");
-            writer.write("<meta charset=\"UTF-8\">");
-            writer.write("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-            writer.write("<title>Reporte de Errores y Tokens</title>");
-            writer.write("<style>");
-            writer.write("body { font-family: Arial, sans-serif; margin: 20px; }");
-            writer.write("h1 { color: #333; }");
-            writer.write("table { border-collapse: collapse; width: 100%; margin-top: 20px; }");
-            writer.write("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
-            writer.write("th { background-color: #f2f2f2; }");
-            writer.write(".error { color: red; }");
-            writer.write("</style>");
-            writer.write("</head>");
-            writer.write("<body>");
-            writer.write("<h1>Reporte de Errores y Tokens</h1>");
+public void generarArchivoHTML(String nombreArchivo, List<Token> tokens) {
+    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(nombreArchivo), "UTF-8"))) {
+        // Escribiendo la cabecera del documento HTML
+        writer.write("<!DOCTYPE html>");
+        writer.write("<html lang=\"es\">");
+        writer.write("<head>");
+        writer.write("<meta charset=\"UTF-8\">");
+        writer.write("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        writer.write("<title>Reporte de Errores y Tokens</title>");
+        writer.write("<style>");
+        writer.write("body { font-family: Arial, sans-serif; margin: 20px; }");
+        writer.write("h1 { color: #333; }");
+        writer.write("table { border-collapse: collapse; width: 100%; margin-top: 20px; }");
+        writer.write("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
+        writer.write("th { background-color: #f2f2f2; }");
+        writer.write(".error { color: red; }");
+        writer.write(".valido { color: green; font-weight: bold; }");
+        writer.write("</style>");
+        writer.write("</head>");
+        writer.write("<body>");
+        writer.write("<h1>Reporte de Errores y Tokens</h1>");
 
-            // Verifica si hay errores para mostrar
-            if (mensajesDeError.isEmpty()) {
-                writer.write("<p>No se encontraron errores.</p>");
-            } else {
-                writer.write("<h2>Errores Encontrados</h2>");
-                writer.write("<table>");
-                writer.write("<tr><th>Errores</th></tr>");
-
-                // Escribiendo cada error en la tabla
-                for (String mensaje : mensajesDeError) {
-                    writer.write("<tr><td class=\"error\">" + escapeHtml(mensaje) + "</td></tr>");
-                }
-
-                writer.write("</table>");
-            }
-
-            // Generar sección de tokens
-            writer.write("<h2>Tokens Encontrados</h2>");
+        // Verifica si hay errores para mostrar
+        if (mensajesDeError.isEmpty()) {
+            writer.write("<p>No se encontraron errores.</p>");
+        } else {
+            writer.write("<h2>Errores Encontrados</h2>");
             writer.write("<table>");
-            writer.write("<tr><th>Texto</th><th>Tipo</th><th>Color</th></tr>");
+            writer.write("<tr><th>Errores</th></tr>");
 
-            // Escribiendo cada token en la tabla
-            for (Token token : tokens) {
-                writer.write("<tr>");
-                writer.write("<td>" + escapeHtml(token.getText()) + "</td>");
-                writer.write("<td>" + escapeHtml(token.getType()) + "</td>");
-                writer.write("<td style=\"color: " + token.getColor() + ";\">" + escapeHtml(token.getColor()) + "</td>");
-                writer.write("</tr>");
+            // Escribiendo cada error en la tabla
+            for (String mensaje : mensajesDeError) {
+                writer.write("<tr><td class=\"error\">" + escapeHtml(mensaje) + "</td></tr>");
             }
 
             writer.write("</table>");
-            writer.write("</body>");
-            writer.write("</html>");
-        } catch (IOException e) {
-            System.err.println("Error al generar el archivo HTML: " + e.getMessage());
         }
-    }
+        
+        // Verifica si hay estructuras para mostrar
+        if (mensajesDeExito.isEmpty()) {
+            writer.write("<p>No se encontraron estructuras válidas.</p>");
+        } else {
+            writer.write("<h2>Estructuras Encontradas</h2>");
+            writer.write("<table>");
+            writer.write("<tr><th>Estructuras</th></tr>");
 
-    // Método para escapar caracteres HTML
-    private String escapeHtml(String texto) {
-        return texto.replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
-                    .replace("\"", "&quot;")
-                    .replace("'", "&apos;");
-    }
+            // Escribiendo cada mensaje de éxito en la tabla
+            for (String mensaje : mensajesDeExito) {
+                writer.write("<tr><td>" + escapeHtml(mensaje) + 
+                             " <span class='valido'>Estructura válida</span></td></tr>");
+            }
 
+            writer.write("</table>");
+        }
+
+        // Generar sección de tokens
+        writer.write("<h2>Tokens Encontrados</h2>");
+        writer.write("<table>");
+        writer.write("<tr><th>Texto</th><th>Tipo</th><th>Color</th></tr>");
+
+        // Escribiendo cada token en la tabla
+        for (Token token : tokens) {
+            writer.write("<tr>");
+            writer.write("<td>" + escapeHtml(token.getText()) + "</td>");
+            writer.write("<td>" + escapeHtml(token.getType()) + "</td>");
+            writer.write("<td style=\"color: " + token.getColor() + ";\">" + escapeHtml(token.getColor()) + "</td>");
+            writer.write("</tr>");
+        }
+
+        writer.write("</table>");
+        writer.write("</body>");
+        writer.write("</html>");
+    } catch (IOException e) {
+        System.err.println("Error al generar el archivo HTML: " + e.getMessage());
+    }
+}
+
+// Método para escapar caracteres HTML
+private String escapeHtml(String texto) {
+    return texto.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+}
 
     
     // Agregar esta parte en la clase AnalizadorSintactico para analizar la instrucción INSERT INTO
@@ -393,6 +433,7 @@ public class AnalizadorSintactico {
 private void analizarInsercion() {
     avanzar();
     if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+        String nombreIdentificador = tokenActual.getText();
         avanzar();
         if (tokenActual != null && tokenActual.getText().equals("(")) {
             avanzar();
@@ -401,7 +442,8 @@ private void analizarInsercion() {
                 avanzar();
                 if (tokenActual != null && tokenActual.getText().equals("VALUES")) {
                     avanzar();
-                    analizarValores();
+                    analizarValores(); 
+                    registrarMensajeExito("INSERT INTO: "+ nombreIdentificador  );
                 } else {
                     registrarError("Se esperaba 'VALUES' después de la lista de columnas en 'INSERT INTO'");
                 }
@@ -503,8 +545,10 @@ private void analizarExpresionConParentesis() {
         if (tokenActual != null && tokenActual.getText().equals("FROM")) {
             avanzar();
             if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+                String nombreIdentificador = tokenActual.getText();
                 avanzar();
                 analizarSentenciasOpcionales();
+                registrarMensajeExito("SELECT FROM: "+ nombreIdentificador  );
             } else {
                 registrarError("Se esperaba un identificador después de 'FROM'");
             }
@@ -512,6 +556,10 @@ private void analizarExpresionConParentesis() {
             registrarError("Se esperaba 'FROM' después de 'SELECT'");
         }
     }
+    
+
+
+                
 
     // Método para analizar la selección de columnas
     private void analizarSeleccionDeColumnas() {
@@ -730,6 +778,7 @@ private void analizarUpdate() {
             if (tokenActual != null && tokenActual.getText().equals("WHERE")) {
                 avanzar();
                 analizarCondicionUp(); // Analiza la condición
+                 registrarMensajeExito("UPDATE: "+ nombreTabla  );
             }
         } else {
             registrarError("Se esperaba 'SET' después del identificador de la tabla");
@@ -750,20 +799,22 @@ private void analizarUpdate() {
 
 private void analizarSet() {
     boolean primeraAsignacion = true; // Para controlar la primera asignación
-    while (tokenActual != null && !tokenActual.getText().equals(";")) {
+    while (tokenActual != null && !tokenActual.getText().equals(";") && !tokenActual.getText().equals("WHERE")) {
         if (tokenActual.getType().equals("Identificador")) {
             String columna = tokenActual.getText(); // Guarda el nombre de la columna
             avanzar(); // Avanza al siguiente token
 
             if (tokenActual != null && tokenActual.getText().equals("=")) {
                 avanzar(); // Avanza al token siguiente (el dato a asignar)
-                analizarDatoUp(); // Dato a asignar
+                analizarExpresionAritmetica(); // Analiza una expresión aritmética o un dato
                 primeraAsignacion = false; // Marca que al menos una asignación se realizó
             } else {
                 registrarError("Se esperaba '=' después del identificador de la columna");
+                return; // Salida anticipada si hay un error
             }
         } else {
             registrarError("Se esperaba un identificador para el nombre de la columna");
+            return; // Salida anticipada si hay un error
         }
 
         // Manejo de múltiples asignaciones
@@ -781,6 +832,18 @@ private void analizarSet() {
 }
 
 
+// Método para analizar una expresión aritmética simple (dato o dato + operador + dato)
+private void analizarExpresionAritmetica() {
+    analizarDatoUp(); // Analiza el primer operando
+
+    // Mientras haya un operador aritmético, seguir analizando la expresión
+    while (tokenActual != null && 
+          (tokenActual.getType().equals("Operador Aritmético"))) {
+        avanzar(); // Avanza al siguiente operador
+        analizarDatoUp(); // Analiza el segundo operando o dato siguiente
+    }
+}
+
 // Método para analizar un dato (puede ser un literal, variable, etc.)
 private void analizarDatoUp() {
     if (tokenActual != null) {
@@ -797,14 +860,41 @@ private void analizarDatoUp() {
     }
 }
 
-
 private void analizarCondicionUp() {
-    // Implementar el análisis de la condición en la cláusula WHERE
-    // Por simplicidad, aquí solo se avanza hasta encontrar un punto y coma o un fin de línea
+    boolean condicionValida = false; // Controla que se incluya una condición válida
     while (tokenActual != null && !tokenActual.getText().equals(";")) {
-        avanzar(); // Avanza a través de los tokens de la condición
+        if (tokenActual.getType().equals("Identificador")) {
+            
+            avanzar();
+            if (tokenActual != null && (tokenActual.getType().equals("Operador Relacional")|| tokenActual.getType().equals("Signo"))) {
+                avanzar();
+                if (tokenActual != null && (tokenActual.getType().equals("Decimal") || 
+                                            tokenActual.getType().equals("Entero") || 
+                                            tokenActual.getType().equals("Cadena") || 
+                                            tokenActual.getType().equals("Identificador"))) {
+                    avanzar();
+                    condicionValida = true;                   
+                } else {
+                    registrarError("Se esperaba un valor después del operador relacional en WHERE");
+                    return;
+                }
+            } else {
+                registrarError("Se esperaba un operador relacional en WHERE");
+                return;
+            }
+        } else if (tokenActual.getType().equals("Operador Lógico")) {
+            avanzar(); // Avanza después de un operador lógico
+        } else {
+            registrarError("Condición no válida en WHERE");
+            return;
+        }
+    }
+
+    if (!condicionValida) {
+        registrarError("Se esperaba una condición válida en la cláusula WHERE");
     }
 }
+
 
 
     
@@ -814,14 +904,16 @@ private void analizarCondicionUp() {
         if (tokenActual != null && tokenActual.getText().equals("FROM")) {
             avanzar();
             if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+                String nombreIdentificador = tokenActual.getText();
                 avanzar(); // Identificador de la tabla
                 // Manejo opcional para WHERE
                 if (tokenActual != null && tokenActual.getText().equals("WHERE")) {
                     avanzar();
                     analizarCondicion();
                 }
-                if (tokenActual != null && tokenActual.getText().equals(";")) {
+                if (tokenActual != null && tokenActual.getText().equals(";")) {                   
                     avanzar(); // Fin de la instrucción
+                    registrarMensajeExito("DETELE: "+ nombreIdentificador  );
                 } else {
                     registrarError("Se esperaba ';' al final de la instrucción DELETE");
                 }
@@ -867,7 +959,7 @@ private void analizarCondicionUp() {
                             avanzar();
                             break;
                     }
-                }
+                } registrarMensajeExito("ALTER TABLE: "+ nombreTabla  );
             } else {
                 registrarError("Se esperaba un identificador para el nombre de la tabla");
             }
@@ -893,11 +985,37 @@ private void analizarCondicionUp() {
     }
 
     private void analizarAddConstraint(String nombreTabla) {
+    avanzar();
+    if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+        String nombreRestriccion = tokenActual.getText();
         avanzar();
-        if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
-            String nombreRestriccion = tokenActual.getText();
+
+        // Verificar si es una restricción de UNIQUE o FOREIGN KEY
+        if (tokenActual != null && tokenActual.getType().equals("CREATE")) {
             avanzar();
-            if (tokenActual != null && tokenActual.getText().equals("FOREIGN")) {
+            if (tokenActual != null && tokenActual.getText().equals("UNIQUE")) {
+                // Manejar la restricción UNIQUE
+                avanzar();
+                if (tokenActual != null && tokenActual.getText().equals("(")) {
+                    avanzar();
+                    if (tokenActual != null && tokenActual.getType().equals("Identificador")) {
+                        avanzar();
+                        if (tokenActual != null && tokenActual.getText().equals(")")) {
+                            avanzar();
+                            // Opcional: llamar a un método para manejar las opciones On Delete y On Update
+                            // analizarOpcionesOnDeleteOnUpdate();
+                            // Registrar el éxito o almacenar la restricción UNIQUE
+                        } else {
+                            registrarError("Se esperaba ')' después del identificador en UNIQUE");
+                        }
+                    } else {
+                        registrarError("Se esperaba un identificador en UNIQUE");
+                    }
+                } else {
+                    registrarError("Se esperaba '(' después de 'UNIQUE'");
+                }
+            } else if (tokenActual != null && tokenActual.getText().equals("FOREIGN")) {
+                // Manejar la restricción FOREIGN KEY
                 avanzar();
                 if (tokenActual != null && tokenActual.getText().equals("KEY")) {
                     avanzar();
@@ -918,6 +1036,7 @@ private void analizarCondicionUp() {
                                                 if (tokenActual != null && tokenActual.getText().equals(")")) {
                                                     avanzar();
                                                     analizarOpcionesOnDeleteOnUpdate();
+                                                   
                                                 } else {
                                                     registrarError("Se esperaba ')' después del identificador en REFERENCES");
                                                 }
@@ -946,12 +1065,16 @@ private void analizarCondicionUp() {
                     registrarError("Se esperaba 'KEY' después de 'FOREIGN'");
                 }
             } else {
-                registrarError("Tipo de restricción no reconocido después de 'ADD CONSTRAINT'");
+              //  registrarError("Tipo de restricción no reconocido después de 'ADD CONSTRAINT'");
             }
         } else {
-            registrarError("Se esperaba un identificador para el nombre de la restricción");
+            registrarError("Se esperaba 'CREATE' después del nombre de la restricción");
         }
+    } else {
+        registrarError("Se esperaba un identificador para el nombre de la restricción");
     }
+}
+
 
     private void analizarOpcionesOnDeleteOnUpdate() {
         while (tokenActual != null && (tokenActual.getText().equals("ON"))) {
